@@ -11,7 +11,7 @@ out vec4 glcolor;
 out vec3 normal;
 
 void main() {
-  gl_Position = gbufferProjection * gl_ModelViewMatrix *  vec4(gl_Vertex.xyz, 1);
+  gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix *  vec4(gl_Vertex.xyz, 1);
   texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
   lmcoord = (gl_TextureMatrix[1] * gl_MultiTexCoord1).xy;
   glcolor = gl_Color;

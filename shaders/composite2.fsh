@@ -31,10 +31,10 @@ void main() {
       light += texture(colortex2, texcoord+r*th*d).xyz*f;
     }
   }
-  light/=factor;
+  light /= factor;
 
   vec3 col = texture(colortex0, texcoord).rgb;
   
   outLight = vec4(light, 1.0);
-  outColor = vec4(col*light, 1.0);
+  outColor = vec4(light*col, 1.0);
 }
