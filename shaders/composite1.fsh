@@ -13,7 +13,6 @@ in vec2 texcoord;
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outLight;
 
-uniform mat4 gbufferProjectionInverse;
 uniform mat4 gbufferProjection;
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferModelView;
@@ -39,10 +38,10 @@ void main() {
   vec2 hitUV;
   vec3 hitPos;
 
-  vec3 light = texture(colortex3, texcoord).rgb+pow(texture(colortex2, texcoord).rgb,vec3(4))/2;
+  vec3 light = texture(colortex3, texcoord).rgb+pow(texture(colortex2, texcoord).rgb,vec3(2))/2;
   
   if (raymarchSSGI(pos, rn, hitUV, hitPos)) {
-    vec3 mclight = texture(colortex3, hitUV).rgb+pow(texture(colortex2, hitUV).rgb,vec3(4));
+    vec3 mclight = texture(colortex3, hitUV).rgb+pow(texture(colortex2, hitUV).rgb,vec3(2))/2;
     vec3 gi = texture(colortex0, hitUV).rgb*mclight;
     vec3 lightDir = normalize(hitPos - pos);
     float falloff = pow(length(hitPos - pos), 2)/10+1;

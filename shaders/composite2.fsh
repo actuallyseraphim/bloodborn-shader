@@ -16,25 +16,16 @@ layout(location = 1) out vec4 outLight;
 uniform float viewWidth;
 uniform float viewHeight;
 
+#include "lib/common.glsl"
+
 void main() {
   vec2 d = 1/vec2(viewWidth,viewHeight);
   vec3 light = vec3(0);
-  vec3 normal = texture(colortex1, texcoord).xyz*2-1;
+  float dist0 = linearizeDepth(texture(depthtex0, texcoord).r);
   float factor = 0;
-  for (int i = 0; i < 10; i++) {
-    for (int j = 0; j < 10; j++) {
-      vec2 th = vec2(cos(float(i)/10+j), sin(float(i)/10+j));
-      float r = j;
-      vec3 n = texture(colortex1, texcoord+r*th*d).xyz*2-1;
-      float f = dot(normal, n);
-      factor += f;
-      light += texture(colortex2, texcoord+r*th*d).xyz*f;
-    }
-  }
-  light /= factor;
 
   vec3 col = texture(colortex0, texcoord).rgb;
   
   outLight = vec4(light, 1.0);
-  outColor = vec4(light*col, 1.0);
+  outColor = vec4(col*texture(colortex2, texcoord).xyz, 1.0);
 }

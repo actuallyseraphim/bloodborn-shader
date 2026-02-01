@@ -9,6 +9,7 @@ out vec2 lmcoord;
 out vec2 texcoord;
 out vec4 glcolor;
 out vec3 normal;
+out vec3 glposition;
 
 void main() {
   gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix *  vec4(gl_Vertex.xyz, 1);
@@ -16,4 +17,5 @@ void main() {
   lmcoord = (gl_TextureMatrix[1] * gl_MultiTexCoord1).xy;
   glcolor = gl_Color;
   normal = gl_NormalMatrix * gl_Normal;
+  glposition = gl_Vertex.xyz;
 }

@@ -35,14 +35,14 @@ bool raymarchSSGI(vec3 rayOrigin,
                   vec3 rayDir,
                   out vec2 hitUV,
                   out vec3 hitPos) {
-  const int STEPS = 30;
-  const float STEP_SIZE = 0.1;
+  const int STEPS = 40;
+  const float STEP_SIZE = 0.15;
   const float THICKNESS = 0.1;
 
   vec3 pos = rayOrigin;
 
   for (int i = 0; i < STEPS; i++) {
-    pos += rayDir * STEP_SIZE * (i+1)/10;
+    pos += rayDir * STEP_SIZE * (i+1)/30;
 
     vec4 clip = gbufferProjection * vec4(pos, 1.0);
     vec3 ndc  = clip.xyz / clip.w;
