@@ -26,6 +26,8 @@ uniform float viewWidth;
 uniform float viewHeight;
 uniform int frameCounter;
 
+uniform float ambient;
+
 void main() {
   vec3 col = texture(colortex0, texcoord).xyz;
   vec2 ignNoise = vec2(IGN(gl_FragCoord.xy, frameCounter),
@@ -38,10 +40,10 @@ void main() {
   vec2 hitUV;
   vec3 hitPos;
 
-  vec3 light = texture(colortex3, texcoord).rgb+pow(texture(colortex2, texcoord).rgb,vec3(2))/2;
+  vec3 light = texture(colortex3, texcoord).rgb+ambient;
   
   if (raymarchSSGI(pos, rn, hitUV, hitPos)) {
-    vec3 mclight = texture(colortex3, hitUV).rgb+pow(texture(colortex2, hitUV).rgb,vec3(2))/2;
+    vec3 mclight = texture(colortex3, hitUV).rgb+0.02;
     vec3 gi = texture(colortex0, hitUV).rgb*mclight;
     vec3 lightDir = normalize(hitPos - pos);
     float falloff = pow(length(hitPos - pos), 2)/10+1;

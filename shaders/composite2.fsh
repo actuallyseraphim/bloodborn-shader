@@ -27,5 +27,5 @@ void main() {
   vec3 col = texture(colortex0, texcoord).rgb;
   
   outLight = vec4(light, 1.0);
-  outColor = vec4(col*texture(colortex2, texcoord).xyz, 1.0);
+  outColor = vec4(col*texture(colortex2,texcoord).rgb, 1.0);
 }
