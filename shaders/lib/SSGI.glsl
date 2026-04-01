@@ -35,7 +35,7 @@ bool raymarchSSGI(vec3 rayOrigin,
                   vec3 rayDir,
                   out vec2 hitUV,
                   out vec3 hitPos) {
-  const int STEPS = 40;
+  const int STEPS = 50;
   const float STEP_SIZE = 0.15;
   const float THICKNESS = 0.1;
 
@@ -47,15 +47,11 @@ bool raymarchSSGI(vec3 rayOrigin,
     vec4 clip = gbufferProjection * vec4(pos, 1.0);
     vec3 ndc  = clip.xyz / clip.w;
 
-    if (abs(ndc.x) > 1.0 || abs(ndc.y) > 1.0 || ndc.z > 1.0)
-      return false;
-
     vec2 uv = ndc.xy * 0.5 + 0.5;
 
     float sceneDepth = texture(depthtex0, uv).r;
     vec3 scenePos = reconstructViewPos(uv, sceneDepth);
 
-    // Depth test (thickness avoids acne)
     if (scenePos.z > pos.z+0.02) {
       hitUV = uv;
       hitPos = scenePos;
