@@ -24,6 +24,4 @@ void main() {
   normal   = normalize(gl_NormalMatrix * gl_Normal);
   tangent  = normalize(gl_NormalMatrix * at_tangent.xyz);
   binormal = normalize(cross(normal, tangent) * at_tangent.w);
-
-  glposition = gl_Vertex.xyz;
 }

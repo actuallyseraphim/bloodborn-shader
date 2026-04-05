@@ -34,9 +34,10 @@ vec3 sampleCosineHemisphere(vec3 N, float u1, float u2) {
 bool raymarchSSGI(vec3 rayOrigin,
                   vec3 rayDir,
                   out vec2 hitUV,
-                  out vec3 hitPos) {
-  const int STEPS = 50;
-  const float STEP_SIZE = 0.15;
+                  out vec3 hitPos,
+                  float stepSize) {
+  const int STEPS = 60;
+  float STEP_SIZE = stepSize;
   const float THICKNESS = 0.1;
 
   vec3 pos = rayOrigin;
@@ -47,12 +48,23 @@ bool raymarchSSGI(vec3 rayOrigin,
     vec4 clip = gbufferProjection * vec4(pos, 1.0);
     vec3 ndc  = clip.xyz / clip.w;
 
-    vec2 uv = ndc.xy * 0.5 + 0.5;
+    if (any(lessThan(ndc.xy, vec2(-1)))||any(greaterThan(ndc.xy, vec2(1)))) {
+      return false;
+    }
 
-    float sceneDepth = texture(depthtex0, uv).r;
+    vec2 uv = ndc.xy * 0.5 + 0.5;
+    
+    float sceneDepth = texture(depthtex2, uv).r;
     vec3 scenePos = reconstructViewPos(uv, sceneDepth);
 
-    if (scenePos.z > pos.z+0.02) {
+    if (sceneDepth <= 0.0) {
+      return false;
+    }
+    if (sceneDepth >= 1.0) {
+      continue;
+    }
+    
+    if (abs(scenePos.z - pos.z) < abs(pos.z - rayOrigin.z)*raySpread) {
       hitUV = uv;
       hitPos = scenePos;
       return true;

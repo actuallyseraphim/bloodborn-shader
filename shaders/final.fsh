@@ -9,6 +9,7 @@ uniform sampler2D colortex5;
 uniform sampler2D colortex6;
 uniform sampler2D depthtex0;
 uniform float vignette;
+uniform float exposure;
 
 in vec2 texcoord;
 out vec4 outColor;
@@ -35,12 +36,10 @@ vec3 linearToSRGB(vec3 col) {
 void main() {
   vec3 hdr = texture(colortex0, texcoord).rgb/2;
   
-  // Exposure → tonemap → gamma
-  vec3 exposed   = applyExposure(hdr, 3);
+  vec3 exposed    = applyExposure(hdr, exposure);
   vec3 tonemapped = ACESFilmic(exposed);
-  vec3 srgb      = linearToSRGB(tonemapped);
+  vec3 srgb       = linearToSRGB(tonemapped);
   
-  // Vignette applied after tonemap so it doesn't push blacks into the curve
   float v = 1.0 - length(texcoord * 2.0 - 1.0) * vignette;
   v = smoothstep(0.0, 1.0, v); // softer falloff than linear
 
@@ -51,6 +50,7 @@ void main() {
   
   outColor = vec4(srgb * v, 1.0);
   //outColor = vec4(texture(colortex6, texcoord).rgb, 1.0);  
-  //outColor = vec4(texture(colortex3, texcoord).rgb, 1.0);  
+  //outColor = vec4(texture(colortex4, texcoord).rgb, 1.0);  
+  //outColor = vec4(vec3(linearizeDepth(getDepth(depthtex0, texcoord))/100), 1.0);  
   //outColor = vec4(skyFunction(normalize(feetPos)).rgb, 1.0);
 }
