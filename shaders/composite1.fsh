@@ -50,9 +50,9 @@ float GGX_NDF(float NdotH, float roughness) {
     float d  = (NdotH * NdotH) * (a2 - 1.0) + 1.0;
     return a2 / max(PI * d * d, 1e-6);
 }
-float fresnelSchlick(float NdotV, float F0, float roughness) {
-  float f = pow(1.0 - NdotV, 5.0);
-  return F0 + (max(1.0 - roughness, F0) - F0) * f;
+
+float fresnelSchlick(float cosTheta, float F0) {
+    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 void main() {
@@ -70,30 +70,32 @@ void main() {
   float ray_len = IGN(gl_FragCoord.xy, frameCounter * 3 + 1);
 
   vec3 hitNorm = normalize(texture(colortex1, texcoord).xyz);
+  float NdotL;
+  float reflectance = texture(colortex4, texcoord).g;
+  float fresnel     = fresnelSchlick(dot(hitNorm, -normalize(pos)), 0.9);
+  
+  float roughness = pow(1.0 - texture(colortex4, texcoord).r, 2.0);
+  // roughness += pow(1.0 - texture(colortex4, texcoord).b, 2.0);
+
   vec3 rn      = sampleCosineHemisphere(hitNorm, u, v);
+  vec3 occludableFastLight;
+  if (IGN(gl_FragCoord.xy, frameCounter * 7 + 2) < reflectance*fresnel) {
+    rn = reflect(normalize(pos), hitNorm);
+    NdotL = reflectance*fresnel;
+    occludableFastLight += NdotL*skyFunction(normalize(gbufferModelViewInverse*vec4(rn,1)).xyz);
+  } else {
+    rn = sampleCosineHemisphere(hitNorm, u, v);
+    NdotL = max(dot(hitNorm, rn), 0.0);
+  }
 
   vec2 hitUV;
   vec3 hitPos;
 
   vec3 light = vec3(0);
-  outFastLight = directEmissionStength*texture(colortex3, texcoord);
+  outFastLight += directEmissionStength*texture(colortex3, texcoord);
   outFastLight += ambient * texture(colortex2, texcoord).y*max(dot(sunPosition, upPosition)/10000, 0.1);
-  float NdotL = max(dot(hitNorm, rn), 0.0);
-
-  float roughness = pow(1.0 - texture(colortex4, texcoord).r, 2.0);
-  roughness += pow(1.0 - texture(colortex4, texcoord).b, 2.0);
-  roughness = min(1,roughness);
   
-  vec3  H      = normalize(pos + rn);
-  float NdotH  = max(dot(hitNorm, H), 0.0);
-  float ndfWeight = GGX_NDF(NdotH, roughness) / max(4.0 * NdotL + 1e-4, 1e-4);
-  ndfWeight  = mix(1.0, ndfWeight, 1.0 - roughness);
-  
-  float reflectance = max(texture(colortex4, texcoord).g,0.0);
-  float fresnel     = fresnelSchlick(dot(hitNorm, -normalize(pos)), reflectance, roughness);
-
-  rn = normalize(mix(rn,reflect(normalize(pos), hitNorm), reflectance*fresnel));
-  NdotL = max(dot(hitNorm, rn), 0.0);
+  rn = normalize(mix(rn,reflect(normalize(pos), hitNorm), 1-sqrt(roughness)));
   if (raymarchSSGI(pos, rn, hitUV, hitPos, ray_len*0.15+0.05)) {
     vec3 hitLight  = texture(colortex3, hitUV).rgb*blockEmissionStength;
     // idk why that works, but it makes reflections better
@@ -108,19 +110,12 @@ void main() {
     float falloff  = 1 / (dist * dist + 10.0);
     float fade     = edgeFade.x * edgeFade.y;
 
-    light += NdotL*ndfWeight*hitAlbedo*hitLight;
+    light += NdotL*hitAlbedo*hitLight;
   }
   
   // shadow map
   rn    = normalize(shadowLightPosition);
   NdotL = max(dot(hitNorm, rn), 0.0);
-  
-  H         = normalize(pos + rn);
-  NdotH     = max(dot(hitNorm, H), 0.0);
-  ndfWeight = GGX_NDF(NdotH, roughness) / max(4.0 * NdotL + 1e-4, 1e-4);
-  ndfWeight = mix(1.0, ndfWeight, 1.0 - roughness);
-  fresnel   = fresnelSchlick(dot(hitNorm, -normalize(pos)), reflectance, roughness);
-
   vec3 feetPlayerPos = (gbufferModelViewInverse * vec4(pos, 1.0)).xyz;
   vec3 shadowViewPos = (shadowModelView * vec4(feetPlayerPos, 1.0)).xyz;
   vec4 shadowClipPos = shadowProjection * vec4(shadowViewPos, 1.0);
@@ -138,8 +133,8 @@ void main() {
 
   shadow /= 25;
   
-  outFastLight.rgb += shadow*skyFunction(normalize(gbufferModelViewInverse*vec4(shadowLightPosition,1)).xyz)*NdotL*ndfWeight*0.1;
-  
+  outFastLight.rgb += shadow*skyFunction(normalize(gbufferModelViewInverse*vec4(shadowLightPosition,1)).xyz)*NdotL*0.1;
+  outFastLight.rgb += shadow*occludableFastLight;
   light += outFastLight.rgb;
   
   outColor = vec4(col, 1.0);
