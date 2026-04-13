@@ -110,7 +110,7 @@ void main() {
     float falloff  = 1 / (dist * dist + 10.0);
     float fade     = edgeFade.x * edgeFade.y;
 
-    light += NdotL*hitAlbedo*hitLight;
+    light += NdotL*hitAlbedo*hitLight*falloff;
   }
   
   // shadow map
@@ -125,7 +125,7 @@ void main() {
   vec3 shadowScreenPos = shadowNDCPos * 0.5 + 0.5;
   float shadow = 0;
   
-  for (int i = 0; i <= 10; i++) {
+  for (int i = 0; i < 10; i++) {
     vec2 u = vogel(i,10,1)/2048;
     float d = texture(shadowtex0, shadowScreenPos.xy+u).r;
     shadow += step(shadowScreenPos.z, d);
@@ -133,9 +133,9 @@ void main() {
 
   shadow /= 25;
   
-  outFastLight.rgb += shadow*skyFunction(normalize(gbufferModelViewInverse*vec4(shadowLightPosition,1)).xyz)*NdotL*0.1;
-  outFastLight.rgb += shadow*occludableFastLight;
-  light += outFastLight.rgb;
+  outFastLight.rgb += 0.1*shadow*skyFunction(normalize(gbufferModelViewInverse*vec4(shadowLightPosition,1)).xyz)*NdotL*0.1;
+  light += shadow*occludableFastLight;
+  //light += outFastLight.rgb;
   
   outColor = vec4(col, 1.0);
   outLight = vec4(light, 1.0);

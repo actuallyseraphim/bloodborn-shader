@@ -9,6 +9,7 @@ uniform sampler2D colortex5;
 uniform sampler2D colortex6;
 uniform sampler2D depthtex0;
 uniform sampler2D depthtex2;
+uniform sampler2D shadowtex0;
 
 in vec4 color;
 in vec2 texcoord;
@@ -29,6 +30,10 @@ uniform float viewHeight;
 uniform mat4 gbufferPreviousModelView;
 uniform mat4 gbufferPreviousProjection;
 
+uniform mat4 shadowProjection;
+uniform mat4 shadowModelView;
+uniform vec3 shadowLightPosition;
+
 uniform vec3 previousCameraPosition;
 uniform int frameCounter;
 uniform float acc_power;
@@ -41,7 +46,7 @@ void main() {
 
   vec3 col = texture(colortex0, texcoord).rgb;
 
-  vec3 screenPos = vec3(texcoord, texture(depthtex2, texcoord).r);
+  vec3 screenPos = vec3(texcoord, texture(depthtex0, texcoord).r);
   vec3 ndcPos = screenPos*2-1;
   vec3 viewPos = projectAndDivide(gbufferProjectionInverse, ndcPos);
   vec3 feetPos = (gbufferModelViewInverse*vec4(viewPos,1)).xyz;
@@ -61,7 +66,7 @@ void main() {
     outLightCum.rgb = texture(colortex3, texcoord).rgb;
   } else {
     if (offscreen||toofar||isEntity||toodim) {
-      outLightCum.rgb = texture(colortex4, texcoord).rgb;
+      outLightCum.rgb = vec3(0);//texture(colortex4, texcoord).rgb;
       outLightCum.a = texture(depthtex0, texcoord).r;
     } else {
       outLightCum.rgb = texture(colortex5, prev).rgb*acc_power;
@@ -78,11 +83,54 @@ void main() {
       outLightCum.a /= 2;
     }
   }
-  
+
   outLightCum.rgb = clamp(outLightCum.rgb,0,10);
-  light = outLightCum.rgb;
+  light += outLightCum.rgb;
+  
+  float dist = length(viewPos);
+  int samples = 128;
+
+  vec3 rayDir = normalize(viewPos);
+  float stepSize = min(dist, 100) / samples;
+
+  float transmittance = 1.0;
+  vec3 inscatter = vec3(0.0);
+
+  vec3 antiShadow = skyFunction(normalize(gbufferModelViewInverse*vec4(shadowLightPosition,1)).xyz)*0.1;
+  
+  for (int i = 0; i < samples; i++) {
+    float t = (i + 0.5) * stepSize;
+    vec3 samplePos = rayDir * t;
+
+    vec3 pos = (gbufferModelViewInverse * vec4(samplePos, 1.0)).xyz;
+
+    vec4 shadowClipPos = shadowProjection * shadowModelView * vec4(pos, 1);
+    shadowClipPos.z -= 0.001;
+    shadowClipPos.xyz = distortShadowClipPos(shadowClipPos.xyz);
+    vec3 shadowScreenPos = shadowClipPos.xyz / shadowClipPos.w * 0.5 + 0.5;
+
+    float shadow = step(shadowScreenPos.z, texture(shadowtex0, shadowScreenPos.xy).r);
+
+    float density = 0.01;
+    //density *= exp(-max(pos.y,0)/10);
+
+    float absorb = exp(-density * stepSize);
+    vec3 lightColor = vec3(1.0) * shadow * antiShadow;
+
+    inscatter += transmittance * lightColor * density * stepSize;
+    transmittance *= absorb;
+    if (transmittance < 0.01) break;
+  }
+
+
+  vec3 fogColor = inscatter;
+  float fogAlpha = 1.0 - transmittance;
+  
+  col = col*(light+texture(colortex4, texcoord).rgb);
+  col = mix(col, fogColor, fogAlpha);
+
   outLight = vec4(light, 1.0);
-  outColor = vec4(col*light, 1.0);
+  outColor = vec4(col, 1.0);
   outDebug = vec4(texture(colortex6, texcoord).rgb,1.0);
   //outDebug = outLightCum;
 }
